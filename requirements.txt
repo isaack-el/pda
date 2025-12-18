@@ -1,1 +1,4 @@
-Flask==2.3.3
+Flask
+Werkzeug
+Jinja2
+waitress
