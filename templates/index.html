@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulator PDA - Validasi Dokumen Otomatis</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        /* Animasi untuk stack */
+        @keyframes pushStack {
+            0% {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes popStack {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+        }
+        
+        .animate-push {
+            animation: pushStack 0.5s ease-out;
+        }
+        
+        .animate-pop {
+            animation: popStack 0.5s ease-out;
+        }
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* Smooth transitions */
+        .smooth-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* File upload area */
+        .file-upload-area {
+            border: 3px dashed #cbd5e1;
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        
+        /* Progress bar */
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        /* File preview */
+        .file-preview {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen font-sans">
+    
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h1 class="text-3xl md:text-4xl font-bold mb-2">
+                        <i class="fas fa-robot mr-3"></i>
+                        Simulator PDA - Validasi Dokumen Otomatis
+                    </h1>
+                    <p class="text-blue-100 text-lg">
+                        Alat pembelajaran automata untuk validasi struktur dokumen menggunakan Pushdown Automata
+                    </p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <h3 class="font-bold mb-2">Mata Kuliah: Automata Kila dan Icel</h3>
+                    <p class="text-sm">Project - Validasi dokumen dengan PDA</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Panel Kiri: Pemilih Validator -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Kartu: Pilih Jenis Validator -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-blue-100 p-3 rounded-xl mr-4">
+                            <i class="fas fa-cogs text-blue-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Pilih Jenis Validator</h2>
+                            <p class="text-gray-600">Pilih salah satu validator di bawah</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Tombol-tombol Validator -->
+                    <div class="space-y-4" id="validatorList">
+                        <button 
+                            onclick="selectValidator('filename')"
+                            id="validator-filename"
+                            class="w-full p-5 rounded-xl border-2 text-left smooth-transition hover:scale-[1.02] hover:shadow-md border-blue-500 bg-blue-50"
+                        >
+                            <div class="flex items-center">
+                                <div class="mr-4">
+                                    <i class="fas fa-file text-blue-500 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-gray-800">Validasi Nama File</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Validasi format nama file: huruf, angka, underscore, ekstensi</p>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <button 
+                            onclick="selectValidator('content')"
+                            id="validator-content"
+                            class="w-full p-5 rounded-xl border-2 text-left smooth-transition hover:scale-[1.02] hover:shadow-md border-gray-200 bg-white"
+                        >
+                            <div class="flex items-center">
+                                <div class="mr-4">
+                                    <i class="fas fa-file-alt text-gray-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-gray-800">Validasi Isi File</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Validasi konten berdasarkan header/format file</p>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <button 
+                            onclick="selectValidator('filetype')"
+                            id="validator-filetype"
+                            class="w-full p-5 rounded-xl border-2 text-left smooth-transition hover:scale-[1.02] hover:shadow-md border-gray-200 bg-white"
+                        >
+                            <div class="flex items-center">
+                                <div class="mr-4">
+                                    <i class="fas fa-file-code text-gray-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-gray-800">Validasi Tipe File</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Validasi ekstensi file berdasarkan kategori</p>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <button 
+                            onclick="selectValidator('xml')"
+                            id="validator-xml"
+                            class="w-full p-5 rounded-xl border-2 text-left smooth-transition hover:scale-[1.02] hover:shadow-md border-gray-200 bg-white"
+                        >
+                            <div class="flex items-center">
+                                <div class="mr-4">
+                                    <i class="fas fa-code text-gray-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-gray-800">Validasi XML/HTML</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Validasi struktur tag XML/HTML yang cocok</p>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <button 
+                            onclick="selectValidator('multilevel')"
+                            id="validator-multilevel"
+                            class="w-full p-5 rounded-xl border-2 text-left smooth-transition hover:scale-[1.02] hover:shadow-md border-gray-200 bg-white"
+                        >
+                            <div class="flex items-center">
+                                <div class="mr-4">
+                                    <i class="fas fa-layer-group text-gray-400 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-gray-800">Validasi Multi-Level</h3>
+                                    <p class="text-sm text-gray-600 mt-1">Validasi nama, format, dan struktur dokumen</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Kartu: Contoh Dokumen -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-green-100 p-3 rounded-xl mr-4">
+                            <i class="fas fa-lightbulb text-green-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Contoh Cepat</h2>
+                            <p class="text-gray-600">Klik contoh untuk langsung mencoba</p>
+                        </div>
+                    </div>
+                    
+                    <div id="examplesContainer" class="space-y-3">
+                        <!-- Contoh akan dimuat di sini -->
+                        <div class="space-y-3">
+                            <button onclick="loadExample('laporan_final.pdf')" class="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-xl smooth-transition border border-gray-200">
+                                <code class="text-sm text-gray-800">laporan_final.pdf</code>
+                                <p class="text-xs text-gray-500 mt-1">Nama file valid</p>
+                            </button>
+                            <button onclick="loadExample('tugas1.docx')" class="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-xl smooth-transition border border-gray-200">
+                                <code class="text-sm text-gray-800">tugas1.docx</code>
+                                <p class="text-xs text-gray-500 mt-1">Nama file valid</p>
+                            </button>
+                            <button onclick="loadExample('file@baru.pdf')" class="w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-xl smooth-transition border border-gray-200">
+                                <code class="text-sm text-gray-800">file@baru.pdf</code>
+                                <p class="text-xs text-gray-500 mt-1">Nama file invalid (@)</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Kartu: Tabel Transisi PDA -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-purple-100 p-3 rounded-xl mr-4">
+                            <i class="fas fa-table text-purple-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Tabel Transisi PDA</h2>
+                            <p class="text-gray-600">Aturan perpindahan state automata</p>
+                        </div>
+                    </div>
+                    
+                    <div id="transitionTable" class="text-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="p-3 text-left">State</th>
+                                        <th class="p-3 text-left">Input</th>
+                                        <th class="p-3 text-left">Stack Top</th>
+                                        <th class="p-3 text-left">→ State Baru</th>
+                                        <th class="p-3 text-left">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="p-3 font-mono">q0</td>
+                                        <td class="p-3">huruf/angka/_</td>
+                                        <td class="p-3">Z0</td>
+                                        <td class="p-3 font-mono">q0</td>
+                                        <td class="p-3"><span class="bg-gray-100 text-gray-800 px-2 py-1 rounded">READ</span></td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="p-3 font-mono">q0</td>
+                                        <td class="p-3">.</td>
+                                        <td class="p-3">Z0</td>
+                                        <td class="p-3 font-mono">q_dot</td>
+                                        <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">PUSH</span></td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="p-3 font-mono">q_dot</td>
+                                        <td class="p-3">pdf/docx/xlsx</td>
+                                        <td class="p-3">.</td>
+                                        <td class="p-3 font-mono">q_accept</td>
+                                        <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">TERIMA</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel Tengah & Kanan: Input dan Hasil -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Kartu: Input Dokumen -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-indigo-100 p-3 rounded-xl mr-4">
+                            <i class="fas fa-edit text-indigo-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Validasi Dokumen</h2>
+                            <p class="text-gray-600">Masukkan dokumen untuk divalidasi</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Validator yang Dipilih -->
+                    <div class="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200" id="currentValidator">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-blue-500 mr-3"></i>
+                            <div>
+                                <p class="font-bold text-gray-800">Validator Terpilih:</p>
+                                <p class="text-gray-600" id="validatorName">Validasi Nama File</p>
+                                <p class="text-sm text-gray-500 mt-1" id="validatorDescription">Validasi format nama file: huruf, angka, underscore, ekstensi pdf/docx/xlsx</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab untuk memilih input type -->
+                    <div class="mb-6">
+                        <div class="border-b border-gray-200">
+                            <div class="flex space-x-4">
+                                <button id="textTab" class="px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600 smooth-transition">
+                                    <i class="fas fa-keyboard mr-2"></i>Input Teks
+                                </button>
+                                <button id="fileTab" class="px-4 py-2 font-medium text-gray-500 hover:text-blue-600 smooth-transition">
+                                    <i class="fas fa-file-upload mr-2"></i>Upload File
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Container untuk input teks -->
+                    <div id="textInputContainer" class="mb-6">
+                        <label for="inputText" class="block text-gray-700 font-bold mb-3">
+                            <i class="fas fa-file-alt mr-2"></i> Masukkan Dokumen:
+                        </label>
+                        <textarea 
+                            id="inputText" 
+                            rows="5" 
+                            class="w-full p-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 custom-scrollbar"
+                            placeholder="Masukkan nama file atau konten dokumen di sini..."
+                        >laporan_final.pdf</textarea>
+                    </div>
+                    
+                    <!-- Container untuk upload file -->
+                    <div id="fileUploadContainer" class="mb-6 hidden">
+                        <!-- Area untuk drag & drop -->
+                        <div class="file-upload-area" id="dropArea">
+                            <div class="text-center p-8">
+                                <div class="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                                    <i class="fas fa-cloud-upload-alt text-blue-500 text-2xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">Upload File</h3>
+                                <p class="text-gray-600 mb-4">Drag & drop file ke sini atau klik untuk memilih</p>
+                                <button onclick="document.getElementById('fileInput').click()" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-xl hover:from-blue-600 hover:to-indigo-700 smooth-transition">
+                                    <i class="fas fa-folder-open mr-2"></i> Pilih File
+                                </button>
+                                <p class="text-sm text-gray-500 mt-4">Mendukung: PDF, DOCX, TXT, XML, Gambar (maks. 10MB)</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Input file hidden -->
+                        <input type="file" id="fileInput" class="hidden" multiple>
+                        
+                        <!-- File info dan preview -->
+                        <div id="fileInfo" class="mt-4 hidden">
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-bold text-gray-800">File Terpilih</h4>
+                                    <button onclick="clearUploadedFiles()" class="text-red-500 hover:text-red-700">
+                                        <i class="fas fa-times"></i> Hapus Semua
+                                    </button>
+                                </div>
+                                <div id="fileList" class="space-y-2 file-preview"></div>
+                                <div class="mt-4">
+                                    <button onclick="processUploadedFiles()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 smooth-transition">
+                                        <i class="fas fa-cogs mr-2"></i> Proses File
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        <div id="uploadProgress" class="mt-4 hidden">
+                            <div class="mb-2 flex justify-between">
+                                <span class="text-sm font-medium text-gray-700">Mengupload...</span>
+                                <span id="progressPercent" class="text-sm font-medium text-blue-600">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="progressBar" class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tombol Aksi -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <button 
+                            onclick="validateDocument()"
+                            id="validateButton"
+                            class="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 smooth-transition flex items-center justify-center"
+                        >
+                            <i class="fas fa-play mr-3"></i>
+                            Validasi Sekarang
+                        </button>
+                        
+                        <button 
+                            onclick="runStepByStep()"
+                            class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-4 px-6 rounded-xl hover:from-blue-600 hover:to-indigo-700 smooth-transition flex items-center justify-center"
+                        >
+                            <i class="fas fa-forward-step mr-3"></i>
+                            Mode Langkah-per-Langkah
+                        </button>
+                        
+                        <button 
+                            onclick="clearAll()"
+                            class="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold py-4 px-6 rounded-xl hover:from-amber-600 hover:to-orange-700 smooth-transition flex items-center justify-center"
+                        >
+                            <i class="fas fa-eraser mr-3"></i>
+                            Hapus Semua
+                        </button>
+                    </div>
+                    
+                    <!-- Hasil Validasi -->
+                    <div id="resultContainer">
+                        <div class="bg-gray-50 rounded-xl p-8 text-center border-2 border-dashed border-gray-300">
+                            <i class="fas fa-question-circle text-gray-400 text-5xl mb-4"></i>
+                            <h3 class="text-xl font-bold text-gray-600 mb-2">Belum Ada Validasi</h3>
+                            <p class="text-gray-500">Hasil validasi akan muncul di sini setelah Anda menekan tombol "Validasi Sekarang"</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Kartu: Visualisasi Stack -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-amber-100 p-3 rounded-xl mr-4">
+                            <i class="fas fa-layer-group text-amber-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Visualisasi Stack PDA</h2>
+                            <p class="text-gray-600">Lihat bagaimana stack berubah selama validasi</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Stack Container -->
+                    <div class="mb-6">
+                        <div class="bg-gradient-to-b from-gray-100 to-gray-200 rounded-xl p-8 border-2 border-gray-300" 
+                             id="stackVisualization">
+                            <div class="flex flex-col-reverse items-center min-h-[250px] justify-end">
+                                <!-- Stack items akan ditambahkan di sini -->
+                                <div class="stack-item bg-gradient-to-r from-gray-800 to-gray-900 text-white font-bold py-4 px-8 rounded-lg text-center w-3/4 mb-2 border-2 border-gray-900">
+                                    Z0 (Dasar Stack)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Stack -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-xl text-center">
+                            <p class="text-sm text-gray-600 mb-1">Status Saat Ini</p>
+                            <p class="text-xl font-bold text-gray-800" id="currentState">q0 (Start)</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-xl text-center">
+                            <p class="text-sm text-gray-600 mb-1">Ukuran Stack</p>
+                            <p class="text-xl font-bold text-gray-800" id="stackSize">1 item</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Kartu: Langkah-Langkah Proses -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200">
+                    <div class="flex items-center mb-6">
+                        <div class="bg-rose-100 p-3 rounded-xl mr-4">
+                            <i class="fas fa-history text-rose-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Langkah-Langkah Proses</h2>
+                            <p class="text-gray-600">Detail setiap langkah validasi oleh PDA</p>
+                        </div>
+                    </div>
+                    
+                    <div id="processSteps" class="custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
+                        <div class="text-center py-8">
+                            <i class="fas fa-list-ol text-gray-300 text-4xl mb-4"></i>
+                            <p class="text-gray-500">Langkah-langkah proses akan muncul di sini setelah validasi</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-6 md:mb-0">
+                    <h3 class="text-xl font-bold mb-2">Simulator PDA - Validasi Dokumen</h3>
+                    <p class="text-gray-400">Project Automata - Kila & Icel</p>
+                </div>
+                <div class="text-gray-400 text-sm">
+                    <p>© 2023 Simulator PDA. Implementasi Pushdown Automata untuk validasi dokumen.</p>
+                    <p class="mt-2">5 Kasus Validasi: Nama File, Isi File, Tipe File, XML, Multi-Level</p>
+                    <p class="mt-1">Fitur Upload File: Drag & Drop, Preview, Multiple Files</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal untuk Mode Langkah-per-Langkah -->
+    <div id="stepModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <i class="fas fa-forward-step text-3xl mr-4"></i>
+                        <div>
+                            <h2 class="text-2xl font-bold">Mode Langkah-per-Langkah</h2>
+                            <p class="text-blue-100">Lihat proses validasi langkah demi langkah</p>
+                        </div>
+                    </div>
+                    <button 
+                        onclick="closeStepModal()"
+                        class="text-white hover:text-gray-200 text-2xl"
+                    >
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 custom-scrollbar" id="stepContent" style="max-height: 60vh; overflow-y: auto;">
+                <!-- Konten langkah-per-langkah akan dimuat di sini -->
+                <div class="text-center py-12">
+                    <i class="fas fa-play-circle text-gray-300 text-5xl mb-6"></i>
+                    <h3 class="text-xl font-bold text-gray-600 mb-3">Mode Langkah-per-Langkah</h3>
+                    <p class="text-gray-500 mb-6">Lakukan validasi terlebih dahulu untuk menggunakan mode ini</p>
+                    <button 
+                        onclick="validateDocument()"
+                        class="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 smooth-transition"
+                    >
+                        <i class="fas fa-play mr-2"></i> Validasi Dokumen Dulu
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="bg-gray-50 p-4 border-t border-gray-200 flex justify-between items-center">
+                <div class="text-gray-600">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <span id="stepCounter">Langkah 0 dari 0</span>
+                </div>
+                <div class="space-x-3">
+                    <button 
+                        onclick="prevStep()"
+                        class="bg-gray-200 text-gray-800 font-bold py-2 px-5 rounded-xl hover:bg-gray-300 smooth-transition"
+                    >
+                        <i class="fas fa-backward-step mr-2"></i> Sebelumnya
+                    </button>
+                    <button 
+                        onclick="nextStep()"
+                        class="bg-blue-500 text-white font-bold py-2 px-5 rounded-xl hover:bg-blue-600 smooth-transition"
+                    >
+                        <i class="fas fa-forward-step mr-2"></i> Selanjutnya
+                    </button>
+                    <button 
+                        onclick="closeStepModal()"
+                        class="bg-rose-500 text-white font-bold py-2 px-5 rounded-xl hover:bg-rose-600 smooth-transition"
+                    >
+                        <i class="fas fa-times mr-2"></i> Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Variabel global
+        let currentValidator = 'filename';
+        let currentHistory = [];
+        let currentStep = 0;
+        let stepInterval = null;
+        let uploadedFiles = [];
+        let currentInputMode = 'text'; // 'text' or 'file'
+        
+        // Informasi validator
+        const validators = {
+            'filename': {
+                name: 'Validasi Nama File',
+                description: 'Validasi format nama file: huruf, angka, underscore, ekstensi pdf/docx/xlsx',
+                icon: 'fa-file',
+                supportedFiles: ['.pdf', '.docx', '.xlsx', '.txt', '.jpg', '.png', '.xml', '.html']
+            },
+            'content': {
+                name: 'Validasi Isi File',
+                description: 'Validasi konten berdasarkan header/format file (PDF: %PDF, DOCX: PK, TXT: huruf/angka)',
+                icon: 'fa-file-alt',
+                supportedFiles: ['.pdf', '.docx', '.txt', '.xml', '.html']
+            },
+            'filetype': {
+                name: 'Validasi Tipe File',
+                description: 'Validasi ekstensi file berdasarkan kategori (PDF, DOC/DOCX, Gambar, Spreadsheet)',
+                icon: 'fa-file-code',
+                supportedFiles: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.gif', '.txt', '.xml', '.html']
+            },
+            'xml': {
+                name: 'Validasi XML/HTML',
+                description: 'Validasi struktur tag XML/HTML yang cocok (tag pembuka dan penutup)',
+                icon: 'fa-code',
+                supportedFiles: ['.xml', '.html', '.htm', '.txt']
+            },
+            'multilevel': {
+                name: 'Validasi Multi-Level',
+                description: 'Validasi nama file, format, dan struktur dokumen sekaligus',
+                icon: 'fa-layer-group',
+                supportedFiles: ['.xml', '.html', '.txt', '.pdf', '.docx']
+            }
+        };
+        
+        // Inisialisasi saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            selectValidator('filename');
+            setupEventListeners();
+            setupFileUpload();
+            switchInputMode('text');
+        });
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Shortcut keyboard
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter untuk validasi cepat
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    validateDocument();
+                }
+                
+                // Ctrl+Shift+Enter untuk mode langkah-per-langkah
+                if (e.ctrlKey && e.shiftKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    runStepByStep();
+                }
+                
+                // Ctrl+U untuk switch ke upload mode
+                if (e.ctrlKey && e.key === 'u') {
+                    e.preventDefault();
+                    switchInputMode('file');
+                }
+                
+                // Ctrl+T untuk switch ke text mode
+                if (e.ctrlKey && e.key === 't') {
+                    e.preventDefault();
+                    switchInputMode('text');
+                }
+            });
+            
+            // Tab switching
+            document.getElementById('textTab').addEventListener('click', () => switchInputMode('text'));
+            document.getElementById('fileTab').addEventListener('click', () => switchInputMode('file'));
+        }
+        
+        // Setup file upload functionality
+        function setupFileUpload() {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            // Handle dropped files
+            dropArea.addEventListener('drop', handleDrop, false);
+            
+            // Handle file selection via button
+            fileInput.addEventListener('change', handleFileSelect, false);
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            function highlight() {
+                dropArea.classList.add('dragover');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('dragover');
+            }
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                handleFiles(files);
+            }
+            
+            function handleFileSelect() {
+                const files = fileInput.files;
+                handleFiles(files);
+            }
+        }
+        
+        // Handle uploaded files
+        function handleFiles(files) {
+            if (!files || files.length === 0) return;
+            
+            // Clear existing files
+            uploadedFiles = [];
+            
+            // Process each file
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Check file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showNotification(`File ${file.name} terlalu besar (maks. 10MB)`, 'error');
+                    continue;
+                }
+                
+                // Check file type based on current validator
+                if (!isFileTypeSupported(file)) {
+                    const supported = validators[currentValidator].supportedFiles.join(', ');
+                    showNotification(`File ${file.name} tidak didukung untuk validator ini. Format didukung: ${supported}`, 'warning');
+                    continue;
+                }
+                
+                uploadedFiles.push(file);
+            }
+            
+            if (uploadedFiles.length > 0) {
+                showFileInfo();
+                showNotification(`Berhasil memilih ${uploadedFiles.length} file`, 'success');
+            } else {
+                hideFileInfo();
+            }
+        }
+        
+        // Check if file type is supported for current validator
+        function isFileTypeSupported(file) {
+            const fileName = file.name.toLowerCase();
+            const supportedExtensions = validators[currentValidator].supportedFiles;
+            
+            return supportedExtensions.some(ext => fileName.endsWith(ext));
+        }
+        
+        // Show file information
+        function showFileInfo() {
+            const fileInfo = document.getElementById('fileInfo');
+            const fileList = document.getElementById('fileList');
+            
+            fileList.innerHTML = '';
+            
+            uploadedFiles.forEach((file, index) => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200';
+                
+                const fileIcon = getFileIcon(file.name);
+                
+                fileElement.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="mr-3">
+                            <i class="${fileIcon} text-blue-500 text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-gray-800 truncate">${file.name}</p>
+                            <p class="text-xs text-gray-500">${formatFileSize(file.size)} • ${file.type || 'Unknown type'}</p>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index})" class="ml-2 text-red-500 hover:text-red-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                fileList.appendChild(fileElement);
+            });
+            
+            fileInfo.classList.remove('hidden');
+        }
+        
+        // Hide file information
+        function hideFileInfo() {
+            document.getElementById('fileInfo').classList.add('hidden');
+        }
+        
+        // Remove a file from the list
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            
+            if (uploadedFiles.length > 0) {
+                showFileInfo();
+            } else {
+                hideFileInfo();
+                document.getElementById('fileInput').value = '';
+            }
+        }
+        
+        // Clear all uploaded files
+        function clearUploadedFiles() {
+            uploadedFiles = [];
+            hideFileInfo();
+            document.getElementById('fileInput').value = '';
+            showNotification('Semua file telah dihapus', 'info');
+        }
+        
+        // Process uploaded files
+        function processUploadedFiles() {
+            if (uploadedFiles.length === 0) {
+                showNotification('Tidak ada file untuk diproses', 'warning');
+                return;
+            }
+            
+            // Show progress bar
+            const progressContainer = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
+            
+            // Simulate upload progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                progressBar.style.width = `${progress}%`;
+                progressPercent.textContent = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    
+                    // Hide progress bar after a delay
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                        
+                        // Process the first file
+                        processFirstFile();
+                    }, 500);
+                }
+            }, 100);
+        }
+        
+        // Process the first uploaded file
+        function processFirstFile() {
+            if (uploadedFiles.length === 0) return;
+            
+            const file = uploadedFiles[0];
+            
+            // Read file content based on validator type
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const content = e.target.result;
+                
+                // Process based on validator
+                switch(currentValidator) {
+                    case 'filename':
+                        // For filename validation, use the filename
+                        document.getElementById('inputText').value = file.name;
+                        break;
+                        
+                    case 'content':
+                    case 'xml':
+                    case 'multilevel':
+                        // For content validation, use file content (first 1000 chars for text files)
+                        if (file.type.startsWith('text/') || 
+                            file.name.endsWith('.txt') || 
+                            file.name.endsWith('.xml') || 
+                            file.name.endsWith('.html')) {
+                            
+                            // For text files, use the content
+                            const textContent = content.substring(0, 1000);
+                            document.getElementById('inputText').value = textContent;
+                        } else {
+                            // For binary files, show a message
+                            document.getElementById('inputText').value = `[File Binary: ${file.name}]`;
+                            
+                            // If it's a PDF or DOCX, we might want to show specific info
+                            if (file.name.endsWith('.pdf')) {
+                                document.getElementById('inputText').value = '%PDF-1.4... [File PDF]';
+                            } else if (file.name.endsWith('.docx')) {
+                                document.getElementById('inputText').value = 'PK... [File DOCX]';
+                            }
+                        }
+                        break;
+                        
+                    case 'filetype':
+                        // For filetype validation, use the extension
+                        const extension = file.name.split('.').pop().toLowerCase();
+                        document.getElementById('inputText').value = extension;
+                        break;
+                }
+                
+                // Switch to text mode to show the result
+                switchInputMode('text');
+                
+                // Show success message
+                showNotification(`File "${file.name}" berhasil diproses`, 'success');
+                
+                // Validate automatically if it's a simple validation
+                if (currentValidator === 'filename' || currentValidator === 'filetype') {
+                    setTimeout(() => validateDocument(), 1000);
+                }
+            };
+            
+            reader.onerror = function() {
+                showNotification('Gagal membaca file', 'error');
+            };
+            
+            // Read file based on type
+            if (file.type.startsWith('text/') || 
+                file.name.endsWith('.txt') || 
+                file.name.endsWith('.xml') || 
+                file.name.endsWith('.html')) {
+                
+                reader.readAsText(file);
+            } else {
+                // For binary files, read as data URL or just use filename
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Get appropriate icon for file type
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            
+            switch(ext) {
+                case 'pdf':
+                    return 'fas fa-file-pdf';
+                case 'doc':
+                case 'docx':
+                    return 'fas fa-file-word';
+                case 'xls':
+                case 'xlsx':
+                    return 'fas fa-file-excel';
+                case 'jpg':
+                case 'jpeg':
+                case 'png':
+                case 'gif':
+                    return 'fas fa-file-image';
+                case 'txt':
+                    return 'fas fa-file-alt';
+                case 'xml':
+                case 'html':
+                case 'htm':
+                    return 'fas fa-file-code';
+                default:
+                    return 'fas fa-file';
+            }
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Switch between text and file input modes
+        function switchInputMode(mode) {
+            currentInputMode = mode;
+            
+            const textTab = document.getElementById('textTab');
+            const fileTab = document.getElementById('fileTab');
+            const textInputContainer = document.getElementById('textInputContainer');
+            const fileUploadContainer = document.getElementById('fileUploadContainer');
+            const validateButton = document.getElementById('validateButton');
+            
+            if (mode === 'text') {
+                textTab.classList.add('border-blue-500', 'text-blue-600');
+                textTab.classList.remove('text-gray-500');
+                fileTab.classList.remove('border-blue-500', 'text-blue-600');
+                fileTab.classList.add('text-gray-500');
+                
+                textInputContainer.classList.remove('hidden');
+                fileUploadContainer.classList.add('hidden');
+                
+                validateButton.innerHTML = '<i class="fas fa-play mr-3"></i> Validasi Sekarang';
+            } else {
+                fileTab.classList.add('border-blue-500', 'text-blue-600');
+                fileTab.classList.remove('text-gray-500');
+                textTab.classList.remove('border-blue-500', 'text-blue-600');
+                textTab.classList.add('text-gray-500');
+                
+                textInputContainer.classList.add('hidden');
+                fileUploadContainer.classList.remove('hidden');
+                
+                validateButton.innerHTML = '<i class="fas fa-upload mr-3"></i> Upload & Validasi';
+            }
+        }
+        
+        // Pilih validator
+        function selectValidator(type) {
+            currentValidator = type;
+            
+            // Update UI tombol validator
+            document.querySelectorAll('#validatorList button').forEach(button => {
+                button.classList.remove('border-blue-500', 'bg-blue-50');
+                button.classList.add('border-gray-200', 'bg-white');
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('text-blue-500');
+                    icon.classList.add('text-gray-400');
+                }
+            });
+            
+            // Highlight validator yang dipilih
+            const selectedBtn = document.getElementById(`validator-${type}`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('border-gray-200', 'bg-white');
+                selectedBtn.classList.add('border-blue-500', 'bg-blue-50');
+                const icon = selectedBtn.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('text-gray-400');
+                    icon.classList.add('text-blue-500');
+                }
+            }
+            
+            // Update nama validator
+            document.getElementById('validatorName').textContent = validators[type].name;
+            document.getElementById('validatorDescription').textContent = validators[type].description;
+            
+            // Muat contoh
+            loadExamples(type);
+            
+            // Muat tabel transisi
+            loadTransitionTable(type);
+            
+            // Set placeholder input
+            setInputPlaceholder(type);
+        }
+        
+        // Set placeholder input berdasarkan validator
+        function setInputPlaceholder(type) {
+            const textarea = document.getElementById('inputText');
+            const placeholders = {
+                'filename': 'Masukkan nama file (contoh: laporan_final.pdf, tugas1.docx)...',
+                'content': 'Masukkan isi file (contoh: %PDFabc123, PK_random, plaintext123)...',
+                'filetype': 'Masukkan ekstensi file (contoh: pdf, docx, jpg, xlsx)...',
+                'xml': 'Masukkan XML/HTML (contoh: <data>hello</data>, <b>123</b>)...',
+                'multilevel': 'Masukkan dokumen lengkap (contoh: <data>hello</data>)...'
+            };
+            textarea.placeholder = placeholders[type] || 'Masukkan dokumen untuk divalidasi...';
+        }
+        
+        // Muat contoh-contoh
+        function loadExamples(type) {
+            const examples = {
+                'filename': [
+                    {input: 'laporan_final.pdf', desc: 'Nama file valid'},
+                    {input: 'tugas1.docx', desc: 'Nama file valid'},
+                    {input: 'data_123.xlsx', desc: 'Nama file valid'},
+                    {input: 'laporan.final.docx', desc: 'Lebih dari satu titik'},
+                    {input: 'file@baru.pdf', desc: 'Karakter @ tidak valid'},
+                    {input: 'dokumen.ppt', desc: 'Ekstensi tidak valid'}
+                ],
+                'content': [
+                    {input: '%PDFabc123', desc: 'Header PDF valid'},
+                    {input: 'PK_random_data', desc: 'Header DOCX valid'},
+                    {input: 'plaintext123', desc: 'TXT valid (huruf/angka)'},
+                    {input: 'XPDF123', desc: 'Header PDF salah'},
+                    {input: 'PK@@@', desc: 'DOCX dengan simbol'}
+                ],
+                'filetype': [
+                    {input: 'pdf', desc: 'File PDF'},
+                    {input: 'docx', desc: 'File Word'},
+                    {input: 'jpg', desc: 'File gambar'},
+                    {input: 'xlsx', desc: 'File spreadsheet'},
+                    {input: 'ppt', desc: 'Invalid - bukan kategori'},
+                    {input: 'mp4', desc: 'Invalid - bukan kategori'}
+                ],
+                'xml': [
+                    {input: '<data>HELLO</data>', desc: 'XML valid'},
+                    {input: '<b>123</b>', desc: 'HTML valid'},
+                    {input: '<data>HELLO</b>', desc: 'Tag tidak cocok'},
+                    {input: '<data>123', desc: 'Tag tidak ditutup'}
+                ],
+                'multilevel': [
+                    {input: '<data>HELLO</data>', desc: 'Valid multi-level'},
+                    {input: '<b>valid.pdf</b>', desc: 'Valid dengan format'},
+                    {input: '<data>invalid.ppt</data>', desc: 'Ekstensi tidak valid'},
+                    {input: '<data>file@invalid.pdf</data>', desc: 'Nama tidak valid'}
+                ]
+            }[type] || [];
+            
+            const container = document.getElementById('examplesContainer');
+            container.innerHTML = '';
+            
+            if (examples.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">Tidak ada contoh tersedia</p>';
+                return;
+            }
+            
+            examples.forEach(example => {
+                const exampleBtn = document.createElement('button');
+                exampleBtn.className = 'w-full text-left p-4 bg-gray-50 hover:bg-gray-100 rounded-xl smooth-transition border border-gray-200 mb-3';
+                exampleBtn.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-copy text-gray-400 mr-3"></i>
+                        <div class="flex-1 overflow-hidden">
+                            <code class="text-sm text-gray-800 truncate">${example.input}</code>
+                            <p class="text-xs text-gray-500 mt-1">${example.desc}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </div>
+                `;
+                
+                exampleBtn.onclick = () => {
+                    document.getElementById('inputText').value = example.input;
+                    // Switch to text mode
+                    switchInputMode('text');
+                    // Highlight tombol yang diklik
+                    exampleBtn.classList.add('bg-blue-50', 'border-blue-300');
+                    setTimeout(() => {
+                        exampleBtn.classList.remove('bg-blue-50', 'border-blue-300');
+                    }, 1000);
+                };
+                
+                container.appendChild(exampleBtn);
+            });
+        }
+        
+        // Fungsi untuk load contoh dari tombol
+        function loadExample(text) {
+            document.getElementById('inputText').value = text;
+            switchInputMode('text');
+        }
+        
+        // Muat tabel transisi
+        function loadTransitionTable(type) {
+            const tables = {
+                'filename': `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="p-3 text-left">State</th>
+                                    <th class="p-3 text-left">Input</th>
+                                    <th class="p-3 text-left">Stack Top</th>
+                                    <th class="p-3 text-left">→ State Baru</th>
+                                    <th class="p-3 text-left">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q0</td>
+                                    <td class="p-3">a-z, A-Z, 0-9, _</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q0</td>
+                                    <td class="p-3"><span class="bg-gray-100 text-gray-800 px-2 py-1 rounded">READ</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q0</td>
+                                    <td class="p-3">.</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q_dot</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">PUSH .</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q0</td>
+                                    <td class="p-3">@, ?, #, dll</td>
+                                    <td class="p-3">apa saja</td>
+                                    <td class="p-3 font-mono">q_reject</td>
+                                    <td class="p-3"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">REJECT</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q_dot</td>
+                                    <td class="p-3">pdf, docx, xlsx</td>
+                                    <td class="p-3">.</td>
+                                    <td class="p-3 font-mono">q_accept</td>
+                                    <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">TERIMA</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q_dot</td>
+                                    <td class="p-3">lainnya</td>
+                                    <td class="p-3">.</td>
+                                    <td class="p-3 font-mono">q_reject</td>
+                                    <td class="p-3"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">REJECT</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `,
+                'content': `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="p-3 text-left">State</th>
+                                    <th class="p-3 text-left">Input</th>
+                                    <th class="p-3 text-left">Stack Top</th>
+                                    <th class="p-3 text-left">→ State Baru</th>
+                                    <th class="p-3 text-left">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q0</td>
+                                    <td class="p-3">%</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q_pdf_check</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">CHECK PDF</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q0</td>
+                                    <td class="p-3">P</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q_docx_check</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">CHECK DOCX</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q_pdf_check</td>
+                                    <td class="p-3">PDF</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q_accept</td>
+                                    <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">TERIMA</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q_docx_check</td>
+                                    <td class="p-3">K</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q_accept</td>
+                                    <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">TERIMA</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `,
+                'xml': `
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="p-3 text-left">State</th>
+                                    <th class="p-3 text-left">Input</th>
+                                    <th class="p-3 text-left">Stack Top</th>
+                                    <th class="p-3 text-left">→ State Baru</th>
+                                    <th class="p-3 text-left">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q0</td>
+                                    <td class="p-3">&lt;</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q_tag_open</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">READ TAG</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q_tag_open</td>
+                                    <td class="p-3">nama_tag</td>
+                                    <td class="p-3">Z0</td>
+                                    <td class="p-3 font-mono">q_tag_push</td>
+                                    <td class="p-3"><span class="bg-green-100 text-green-800 px-2 py-1 rounded">PUSH tag</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q_tag_push</td>
+                                    <td class="p-3">&gt;</td>
+                                    <td class="p-3">tag</td>
+                                    <td class="p-3 font-mono">q_content</td>
+                                    <td class="p-3"><span class="bg-gray-100 text-gray-800 px-2 py-1 rounded">READ CONTENT</span></td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="p-3 font-mono">q_content</td>
+                                    <td class="p-3">&lt;/</td>
+                                    <td class="p-3">tag</td>
+                                    <td class="p-3 font-mono">q_tag_close</td>
+                                    <td class="p-3"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">POP tag</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `
+            };
+            
+            const defaultTable = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-3 text-left">State</th>
+                                <th class="p-3 text-left">Input</th>
+                                <th class="p-3 text-left">Stack Top</th>
+                                <th class="p-3 text-left">→ State Baru</th>
+                                <th class="p-3 text-left">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-3 font-mono">q0</td>
+                                <td class="p-3">input valid</td>
+                                <td class="p-3">Z0</td>
+                                <td class="p-3 font-mono">q_process</td>
+                                <td class="p-3"><span class="bg-gray-100 text-gray-800 px-2 py-1 rounded">READ</span></td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-3 font-mono">q_process</td>
+                                <td class="p-3">sesuai aturan</td>
+                                <td class="p-3">apa saja</td>
+                                <td class="p-3 font-mono">q_accept</td>
+                                <td class="p-3"><span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">TERIMA</span></td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-3 font-mono">q_process</td>
+                                <td class="p-3">tidak sesuai</td>
+                                <td class="p-3">apa saja</td>
+                                <td class="p-3 font-mono">q_reject</td>
+                                <td class="p-3"><span class="bg-red-100 text-red-800 px-2 py-1 rounded">REJECT</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('transitionTable').innerHTML = tables[type] || defaultTable;
+        }
+        
+        // Validasi dokumen
+        function validateDocument() {
+            // Check if we're in file mode and have files to process
+            if (currentInputMode === 'file' && uploadedFiles.length > 0) {
+                processUploadedFiles();
+                return;
+            }
+            
+            const inputText = document.getElementById('inputText').value.trim();
+            
+            if (!inputText) {
+                showNotification('Masukkan dokumen terlebih dahulu!', 'error');
+                return;
+            }
+            
+            // Tampilkan loading
+            document.getElementById('resultContainer').innerHTML = `
+                <div class="bg-blue-50 rounded-xl p-8 text-center border-2 border-blue-200">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                    <h3 class="text-xl font-bold text-gray-700 mb-2">Memvalidasi Dokumen...</h3>
+                    <p class="text-gray-600">PDA sedang memproses dokumen Anda</p>
+                </div>
+            `;
+            
+            // Simulasi PDA untuk validasi
+            setTimeout(() => {
+                const result = simulatePDA(currentValidator, inputText);
+                displayResults(result);
+                currentHistory = result.history;
+                currentStep = 0;
+                
+                // Tampilkan notifikasi
+                if (result.valid) {
+                    showNotification('Dokumen valid! ✓', 'success');
+                } else {
+                    showNotification('Dokumen tidak valid! ✗', 'error');
+                }
+            }, 800);
+        }
+        
+        // Simulasi PDA berdasarkan validator (fungsi tetap sama)
+        function simulatePDA(type, input) {
+            let history = [];
+            let stack = ['Z0'];
+            let state = 'q0';
+            let step = 1;
+            let valid = false;
+            
+            // Fungsi untuk menambahkan ke history
+            function addHistory(char, action) {
+                history.push({
+                    step: step++,
+                    char: char,
+                    state: state,
+                    stack: [...stack],
+                    action: action
+                });
+            }
+            
+            // Validasi berdasarkan tipe
+            switch(type) {
+                case 'filename':
+                    // Validasi nama file
+                    valid = validateFilename(input, history, stack, state, addHistory);
+                    break;
+                    
+                case 'content':
+                    // Validasi isi file
+                    valid = validateContent(input, history, stack, state, addHistory);
+                    break;
+                    
+                case 'filetype':
+                    // Validasi tipe file
+                    valid = validateFileType(input, history, stack, state, addHistory);
+                    break;
+                    
+                case 'xml':
+                    // Validasi XML
+                    valid = validateXML(input, history, stack, state, addHistory);
+                    break;
+                    
+                case 'multilevel':
+                    // Validasi multi-level
+                    valid = validateMultiLevel(input, history, stack, state, addHistory);
+                    break;
+                    
+                default:
+                    valid = false;
+            }
+            
+            return {
+                valid: valid,
+                steps: history.length,
+                final_state: state,
+                stack_size: stack.length,
+                final_stack: [...stack],
+                history: history
+            };
+        }
+        
+        // Fungsi validasi nama file (tetap sama)
+        function validateFilename(input, history, stack, state, addHistory) {
+            let dotFound = false;
+            let hasInvalidChar = false;
+            
+            addHistory('ε', 'START - Validasi nama file');
+            state = 'q0';
+            
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                
+                // State q0: membaca nama file sebelum titik
+                if (state === 'q0') {
+                    if (/[a-zA-Z0-9_]/.test(char)) {
+                        addHistory(char, 'READ - Karakter valid');
+                    } else if (char === '.') {
+                        if (dotFound) {
+                            addHistory(char, 'REJECT - Lebih dari satu titik');
+                            state = 'q_reject';
+                            return false;
+                        }
+                        dotFound = true;
+                        stack.push('.');
+                        addHistory(char, 'PUSH . - Titik ditemukan');
+                        state = 'q_dot';
+                    } else if (/[@?#!%&*]/.test(char)) {
+                        addHistory(char, 'REJECT - Karakter tidak valid');
+                        state = 'q_reject';
+                        return false;
+                    } else {
+                        addHistory(char, 'REJECT - Karakter tidak diizinkan');
+                        state = 'q_reject';
+                        return false;
+                    }
+                }
+                // State q_dot: membaca setelah titik (ekstensi)
+                else if (state === 'q_dot') {
+                    if (/[a-zA-Z0-9]/.test(char)) {
+                        addHistory(char, 'READ - Bagian ekstensi');
+                    } else {
+                        addHistory(char, 'REJECT - Ekstensi tidak valid');
+                        state = 'q_reject';
+                        return false;
+                    }
+                }
+            }
+            
+            // Cek apakah ada titik dan ekstensi valid
+            if (!dotFound) {
+                addHistory('ε', 'REJECT - Tidak ada titik');
+                state = 'q_reject';
+                return false;
+            }
+            
+            // Cek ekstensi
+            const parts = input.split('.');
+            if (parts.length !== 2) {
+                addHistory('ε', 'REJECT - Format tidak valid');
+                state = 'q_reject';
+                return false;
+            }
+            
+            const extension = parts[1].toLowerCase();
+            const validExtensions = ['pdf', 'docx', 'xlsx'];
+            
+            if (!validExtensions.includes(extension)) {
+                addHistory('ε', `REJECT - Ekstensi ${extension} tidak valid`);
+                state = 'q_reject';
+                return false;
+            }
+            
+            // Pop titik dari stack
+            if (stack[stack.length - 1] === '.') {
+                stack.pop();
+                addHistory('ε', 'POP . - Ekstensi valid');
+            }
+            
+            // Cek stack akhir
+            if (stack.length === 1 && stack[0] === 'Z0') {
+                state = 'q_accept';
+                addHistory('ε', 'ACCEPT - Nama file valid');
+                return true;
+            }
+            
+            state = 'q_reject';
+            addHistory('ε', 'REJECT - Stack tidak kosong');
+            return false;
+        }
+        
+        // Fungsi validasi isi file (tetap sama)
+        function validateContent(input, history, stack, state, addHistory) {
+            addHistory('ε', 'START - Validasi isi file');
+            state = 'q0';
+            
+            // Cek header PDF
+            if (input.startsWith('%PDF')) {
+                for (let i = 0; i < 4; i++) {
+                    addHistory(input[i], 'READ - Header PDF');
+                }
+                state = 'q_accept';
+                addHistory('ε', 'ACCEPT - File PDF valid');
+                return true;
+            }
+            
+            // Cek header DOCX (PK zip format)
+            if (input.startsWith('PK')) {
+                addHistory('P', 'READ - Karakter pertama DOCX');
+                addHistory('K', 'READ - Karakter kedua DOCX');
+                state = 'q_accept';
+                addHistory('ε', 'ACCEPT - File DOCX valid');
+                return true;
+            }
+            
+            // Cek file TXT (hanya huruf dan angka)
+            if (/^[a-zA-Z0-9]+$/.test(input)) {
+                for (let i = 0; i < input.length; i++) {
+                    addHistory(input[i], 'READ - Karakter TXT valid');
+                }
+                state = 'q_accept';
+                addHistory('ε', 'ACCEPT - File TXT valid');
+                return true;
+            }
+            
+            // Jika tidak ada yang cocok
+            state = 'q_reject';
+            addHistory('ε', 'REJECT - Format tidak dikenali');
+            return false;
+        }
+        
+        // Fungsi validasi tipe file (tetap sama)
+        function validateFileType(input, history, stack, state, addHistory) {
+            addHistory('ε', 'START - Validasi tipe file');
+            state = 'q0';
+            
+            const extension = input.toLowerCase();
+            const categories = {
+                'pdf': ['pdf'],
+                'doc': ['doc', 'docx'],
+                'gambar': ['jpg', 'jpeg', 'png', 'gif'],
+                'spreadsheet': ['xls', 'xlsx', 'csv']
+            };
+            
+            // Cari kategori
+            let foundCategory = null;
+            for (const [category, exts] of Object.entries(categories)) {
+                if (exts.includes(extension)) {
+                    foundCategory = category;
+                    break;
+                }
+            }
+            
+            if (foundCategory) {
+                addHistory(extension, `READ - File ${foundCategory}`);
+                state = 'q_accept';
+                addHistory('ε', `ACCEPT - Tipe file valid (${foundCategory})`);
+                return true;
+            } else {
+                addHistory(extension, 'READ - Ekstensi file');
+                state = 'q_reject';
+                addHistory('ε', 'REJECT - Tipe file tidak valid');
+                return false;
+            }
+        }
+        
+        // Fungsi validasi XML (tetap sama)
+        function validateXML(input, history, stack, state, addHistory) {
+            addHistory('ε', 'START - Validasi XML');
+            state = 'q0';
+            
+            let tagName = '';
+            let inTag = false;
+            let inClosingTag = false;
+            
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                
+                if (char === '<') {
+                    if (i + 1 < input.length && input[i + 1] === '/') {
+                        inClosingTag = true;
+                        addHistory('</', 'READ - Tag penutup');
+                        i++; // Skip '/'
+                    } else {
+                        inTag = true;
+                        tagName = '';
+                        addHistory('<', 'READ - Tag pembuka');
+                    }
+                } else if (char === '>') {
+                    if (inTag) {
+                        // Tag pembuka selesai
+                        stack.push(tagName);
+                        addHistory('>', `PUSH ${tagName} - Tag pembuka`);
+                        inTag = false;
+                        state = 'q_content';
+                    } else if (inClosingTag) {
+                        // Tag penutup selesai
+                        const lastTag = stack[stack.length - 1];
+                        if (lastTag === tagName) {
+                            stack.pop();
+                            addHistory('>', `POP ${tagName} - Tag penutup cocok`);
+                        } else {
+                            addHistory('>', `REJECT - Tag tidak cocok (dibuka: ${lastTag}, ditutup: ${tagName})`);
+                            state = 'q_reject';
+                            return false;
+                        }
+                        inClosingTag = false;
+                    }
+                } else if (inTag || inClosingTag) {
+                    tagName += char;
+                } else {
+                    // Konten antara tag
+                    if (state === 'q_content') {
+                        addHistory(char, 'READ - Konten');
+                    }
+                }
+            }
+            
+            // Cek stack akhir
+            if (stack.length === 1 && stack[0] === 'Z0') {
+                state = 'q_accept';
+                addHistory('ε', 'ACCEPT - XML valid');
+                return true;
+            } else {
+                state = 'q_reject';
+                addHistory('ε', `REJECT - Tag belum ditutup: ${stack.slice(1).join(', ')}`);
+                return false;
+            }
+        }
+        
+        // Fungsi validasi multi-level (tetap sama)
+        function validateMultiLevel(input, history, stack, state, addHistory) {
+            // Gabungan validasi: XML + nama file dalam konten
+            addHistory('ε', 'START - Validasi multi-level');
+            
+            // Pertama validasi sebagai XML
+            const xmlValid = validateXML(input, history, stack, 'q0', addHistory);
+            
+            if (!xmlValid) {
+                return false;
+            }
+            
+            // Jika XML valid, ekstrak konten dan validasi sebagai nama file
+            const contentMatch = input.match(/>(.*?)</);
+            if (contentMatch && contentMatch[1]) {
+                const content = contentMatch[1];
+                
+                // Validasi konten sebagai nama file
+                addHistory('ε', 'CHECK - Validasi konten sebagai nama file');
+                const filenameValid = validateFilename(content, history, stack, 'q0', addHistory);
+                
+                if (filenameValid) {
+                    addHistory('ε', 'ACCEPT - Validasi multi-level berhasil');
+                    return true;
+                } else {
+                    addHistory('ε', 'REJECT - Konten tidak valid sebagai nama file');
+                    return false;
+                }
+            }
+            
+            addHistory('ε', 'ACCEPT - Validasi multi-level berhasil');
+            return true;
+        }
+        
+        // Tampilkan hasil validasi (tetap sama)
+        function displayResults(data) {
+            const resultContainer = document.getElementById('resultContainer');
+            
+            if (data.valid) {
+                resultContainer.innerHTML = `
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-8 border-2 border-green-200">
+                        <div class="flex items-center justify-center mb-6">
+                            <div class="bg-green-100 p-4 rounded-full mr-4">
+                                <i class="fas fa-check-circle text-green-600 text-4xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-green-800">Dokumen Valid! ✓</h3>
+                                <p class="text-green-600">Struktur dokumen sesuai dengan aturan</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                            <div class="bg-white p-4 rounded-xl text-center border border-green-200">
+                                <p class="text-sm text-gray-600 mb-1">Jumlah Langkah</p>
+                                <p class="text-2xl font-bold text-gray-800">${data.steps}</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl text-center border border-green-200">
+                                <p class="text-sm text-gray-600 mb-1">State Akhir</p>
+                                <p class="text-2xl font-bold text-gray-800">${data.final_state}</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl text-center border border-green-200">
+                                <p class="text-sm text-gray-600 mb-1">Ukuran Stack Akhir</p>
+                                <p class="text-2xl font-bold text-gray-800">${data.stack_size}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 pt-6 border-t border-green-200">
+                            <p class="text-green-700 text-center">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Stack kosong dan PDA berada di state penerimaan (accept state)
+                            </p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultContainer.innerHTML = `
+                    <div class="bg-gradient-to-r from-rose-50 to-red-50 rounded-xl p-8 border-2 border-rose-200">
+                        <div class="flex items-center justify-center mb-6">
+                            <div class="bg-rose-100 p-4 rounded-full mr-4">
+                                <i class="fas fa-times-circle text-rose-600 text-4xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold text-rose-800">Dokumen Tidak Valid! ✗</h3>
+                                <p class="text-rose-600">Ada masalah dengan struktur dokumen</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                            <div class="bg-white p-4 rounded-xl text-center border border-rose-200">
+                                <p class="text-sm text-gray-600 mb-1">Jumlah Langkah</p>
+                                <p class="text-2xl font-bold text-gray-800">${data.steps}</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl text-center border border-rose-200">
+                                <p class="text-sm text-gray-600 mb-1">State Akhir</p>
+                                <p class="text-2xl font-bold text-gray-800">${data.final_state}</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl text-center border border-rose-200">
+                                <p class="text-sm text-gray-600 mb-1">Ukuran Stack Akhir</p>
+                                <p class="text-2xl font-bold text-gray-800">${data.stack_size}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 pt-6 border-t border-rose-200">
+                            <p class="text-rose-700 text-center">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                ${data.history.length > 0 ? data.history[data.history.length - 1].action : 'Stack tidak kosong atau PDA tidak di state penerimaan'}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Update visualisasi stack
+            updateStackVisualization(data.final_stack);
+            
+            // Update status state dan stack
+            document.getElementById('currentState').textContent = data.final_state;
+            document.getElementById('stackSize').textContent = `${data.stack_size} item`;
+            
+            // Tampilkan langkah-langkah proses
+            showProcessSteps(data.history);
+        }
+        
+        // Update visualisasi stack (tetap sama)
+        function updateStackVisualization(stack) {
+            const container = document.getElementById('stackVisualization');
+            const stackContent = container.querySelector('.flex');
+            
+            // Hapus semua item stack kecuali Z0
+            while (stackContent.children.length > 1) {
+                stackContent.removeChild(stackContent.lastChild);
+            }
+            
+            // Tambahkan item stack (dari atas ke bawah)
+            for (let i = stack.length - 1; i >= 0; i--) {
+                if (stack[i] !== 'Z0') {
+                    const item = document.createElement('div');
+                    item.className = 'stack-item bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 px-6 rounded-lg text-center w-3/4 mb-2 border-2 border-indigo-700 animate-push';
+                    item.textContent = stack[i];
+                    
+                    // Tambahkan di atas Z0
+                    stackContent.insertBefore(item, stackContent.firstChild.nextSibling);
+                    
+                    // Hapus animasi setelah selesai
+                    setTimeout(() => {
+                        item.classList.remove('animate-push');
+                    }, 500);
+                }
+            }
+        }
+        
+        // Tampilkan langkah-langkah proses (tetap sama)
+        function showProcessSteps(history) {
+            const container = document.getElementById('processSteps');
+            container.innerHTML = '';
+            
+            if (!history || history.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-history text-gray-300 text-4xl mb-4"></i>
+                        <p class="text-gray-500">Tidak ada data langkah-langkah</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            history.forEach((step, index) => {
+                const stepElement = document.createElement('div');
+                stepElement.className = `p-4 mb-3 rounded-xl border-2 ${index === history.length - 1 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'}`;
+                
+                const actionType = step.action.includes('PUSH') ? 'push' : 
+                                 step.action.includes('POP') ? 'pop' : 
+                                 step.action.includes('ACCEPT') ? 'accept' : 
+                                 step.action.includes('REJECT') ? 'reject' : 
+                                 step.action.includes('READ') ? 'read' : 'other';
+                
+                const actionColors = {
+                    'push': 'bg-green-100 text-green-800',
+                    'pop': 'bg-red-100 text-red-800',
+                    'accept': 'bg-blue-100 text-blue-800',
+                    'reject': 'bg-rose-100 text-rose-800',
+                    'read': 'bg-gray-100 text-gray-800',
+                    'other': 'bg-yellow-100 text-yellow-800'
+                };
+                
+                stepElement.innerHTML = `
+                    <div class="flex items-start">
+                        <div class="mr-4">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold">
+                                ${step.step}
+                            </span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                <span class="font-bold text-gray-800">Karakter:</span>
+                                <code class="bg-gray-100 px-2 py-1 rounded">${step.char === 'ε' ? 'ε (kosong)' : step.char === ' ' ? '[spasi]' : step.char}</code>
+                                <span class="font-bold text-gray-800 ml-2">State:</span>
+                                <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded font-mono">${step.state}</span>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <span class="font-bold text-gray-800">Stack:</span>
+                                <code class="ml-2 bg-gray-100 px-2 py-1 rounded font-mono">[${step.stack.join(', ')}]</code>
+                            </div>
+                            
+                            <div>
+                                <span class="font-bold text-gray-800">Aksi:</span>
+                                <span class="ml-2 px-3 py-1 rounded ${actionColors[actionType] || 'bg-gray-100 text-gray-800'}">${step.action}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(stepElement);
+            });
+            
+            // Scroll ke bawah
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Mode langkah-per-langkah (tetap sama)
+        function runStepByStep() {
+            if (!currentHistory || currentHistory.length === 0) {
+                showNotification('Lakukan validasi terlebih dahulu!', 'warning');
+                validateDocument();
+                return;
+            }
+            
+            // Tampilkan modal
+            document.getElementById('stepModal').classList.remove('hidden');
+            document.getElementById('stepModal').classList.add('flex');
+            
+            // Reset langkah
+            currentStep = 0;
+            
+            // Isi konten modal
+            const stepContent = document.getElementById('stepContent');
+            stepContent.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-play-circle text-blue-500 text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-3">Mode Langkah-per-Langkah</h3>
+                    <p class="text-gray-600 mb-4">Anda akan melihat proses validasi langkah demi langkah</p>
+                    <p class="text-gray-500 text-sm">Total ${currentHistory.length} langkah</p>
+                </div>
+                <div id="stepDetails"></div>
+            `;
+            
+            // Update counter
+            updateStepCounter();
+            
+            // Tampilkan langkah pertama
+            displayCurrentStep();
+        }
+        
+        // Tutup modal langkah-per-langkah (tetap sama)
+        function closeStepModal() {
+            document.getElementById('stepModal').classList.add('hidden');
+            document.getElementById('stepModal').classList.remove('flex');
+            
+            // Hentikan interval jika ada
+            if (stepInterval) {
+                clearInterval(stepInterval);
+                stepInterval = null;
+            }
+        }
+        
+        // Langkah sebelumnya (tetap sama)
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                displayCurrentStep();
+                updateStepCounter();
+            }
+        }
+        
+        // Langkah berikutnya (tetap sama)
+        function nextStep() {
+            if (currentStep < currentHistory.length - 1) {
+                currentStep++;
+                displayCurrentStep();
+                updateStepCounter();
+            }
+        }
+        
+        // Tampilkan langkah saat ini (tetap sama)
+        function displayCurrentStep() {
+            if (!currentHistory || currentHistory.length === 0) return;
+            
+            const step = currentHistory[currentStep];
+            const stepDetails = document.getElementById('stepDetails');
+            
+            const actionType = step.action.includes('PUSH') ? 'push' : 
+                             step.action.includes('POP') ? 'pop' : 
+                             step.action.includes('ACCEPT') ? 'accept' : 
+                             step.action.includes('REJECT') ? 'reject' :
+                             step.action.includes('READ') ? 'read' : 'other';
+            
+            const actionColors = {
+                'push': 'bg-green-500',
+                'pop': 'bg-red-500',
+                'accept': 'bg-blue-500',
+                'reject': 'bg-rose-500',
+                'read': 'bg-gray-500',
+                'other': 'bg-yellow-500'
+            };
+            
+            const actionIcons = {
+                'push': 'fa-arrow-up',
+                'pop': 'fa-arrow-down',
+                'accept': 'fa-check-circle',
+                'reject': 'fa-times-circle',
+                'read': 'fa-book',
+                'other': 'fa-info-circle'
+            };
+            
+            stepDetails.innerHTML = `
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border-2 border-blue-200">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-full ${actionColors[actionType] || 'bg-gray-500'} flex items-center justify-center mr-3">
+                                    <i class="fas ${actionIcons[actionType] || 'fa-info-circle'} text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-bold text-gray-800">Langkah ${step.step}</h4>
+                                    <p class="text-gray-600">Memproses karakter: <code class="bg-gray-100 px-2 py-1 rounded">${step.char === 'ε' ? 'ε (kosong)' : step.char}</code></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-blue-50 px-4 py-2 rounded-lg">
+                            <p class="text-blue-800 font-bold">${step.state}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-gray-50 p-4 rounded-xl">
+                            <h5 class="font-bold text-gray-700 mb-3">Informasi Stack</h5>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Isi Stack:</span>
+                                    <code class="font-mono bg-white px-2 py-1 rounded">[${step.stack.join(', ')}]</code>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Ukuran Stack:</span>
+                                    <span class="font-bold">${step.stack.length} item</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-4 rounded-xl">
+                            <h5 class="font-bold text-gray-700 mb-3">Aksi PDA</h5>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Jenis Aksi:</span>
+                                    <span class="px-3 py-1 rounded ${actionType === 'push' ? 'bg-green-100 text-green-800' : actionType === 'pop' ? 'bg-red-100 text-red-800' : actionType === 'accept' ? 'bg-blue-100 text-blue-800' : actionType === 'reject' ? 'bg-rose-100 text-rose-800' : 'bg-gray-100 text-gray-800'}">
+                                        ${step.action}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Status:</span>
+                                    <span class="${step.state.includes('reject') || step.action.includes('REJECT') ? 'text-rose-600' : step.state.includes('accept') ? 'text-green-600' : 'text-blue-600'} font-bold">
+                                        ${step.state.includes('reject') ? 'Ditolak' : step.state.includes('accept') ? 'Diterima' : 'Diproses'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${step.action.includes('PUSH') ? `
+                        <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-arrow-up text-green-500 mr-3 text-xl"></i>
+                                <div>
+                                    <h6 class="font-bold text-green-800">PUSH ke Stack</h6>
+                                    <p class="text-green-600 text-sm">Karakter <code class="bg-green-100 px-1 py-0.5 rounded">${step.char}</code> dimasukkan ke dalam stack</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : step.action.includes('POP') ? `
+                        <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-arrow-down text-red-500 mr-3 text-xl"></i>
+                                <div>
+                                    <h6 class="font-bold text-red-800">POP dari Stack</h6>
+                                    <p class="text-red-600 text-sm">Item teratas stack dikeluarkan karena cocok dengan karakter <code class="bg-red-100 px-1 py-0.5 rounded">${step.char}</code></p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : step.action.includes('ACCEPT') ? `
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-check-circle text-blue-500 mr-3 text-xl"></i>
+                                <div>
+                                    <h6 class="font-bold text-blue-800">DOKUMEN DITERIMA</h6>
+                                    <p class="text-blue-600 text-sm">Stack kosong dan PDA di accept state</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : step.action.includes('REJECT') ? `
+                        <div class="bg-rose-50 border border-rose-200 rounded-xl p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-times-circle text-rose-500 mr-3 text-xl"></i>
+                                <div>
+                                    <h6 class="font-bold text-rose-800">DOKUMEN DITOLAK</h6>
+                                    <p class="text-rose-600 text-sm">Stack tidak kosong atau PDA di reject state</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Update visualisasi stack untuk langkah ini
+            updateStackVisualization(step.stack);
+            document.getElementById('currentState').textContent = step.state;
+            document.getElementById('stackSize').textContent = `${step.stack.length} item`;
+        }
+        
+        // Update counter langkah (tetap sama)
+        function updateStepCounter() {
+            document.getElementById('stepCounter').textContent = 
+                `Langkah ${currentStep + 1} dari ${currentHistory.length}`;
+        }
+        
+        // Hapus semua
+        function clearAll() {
+            document.getElementById('inputText').value = '';
+            clearUploadedFiles();
+            clearResults();
+            showNotification('Semua input dan hasil telah dihapus', 'info');
+        }
+        
+        // Hapus hasil (tetap sama)
+        function clearResults() {
+            document.getElementById('resultContainer').innerHTML = `
+                <div class="bg-gray-50 rounded-xl p-8 text-center border-2 border-dashed border-gray-300">
+                    <i class="fas fa-question-circle text-gray-400 text-5xl mb-4"></i>
+                    <h3 class="text-xl font-bold text-gray-600 mb-2">Belum Ada Validasi</h3>
+                    <p class="text-gray-500">Hasil validasi akan muncul di sini setelah Anda menekan tombol "Validasi Sekarang"</p>
+                </div>
+            `;
+            
+            document.getElementById('processSteps').innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-list-ol text-gray-300 text-4xl mb-4"></i>
+                    <p class="text-gray-500">Langkah-langkah proses akan muncul di sini setelah validasi</p>
+                </div>
+            `;
+            
+            // Reset stack visualization
+            updateStackVisualization(['Z0']);
+            document.getElementById('currentState').textContent = 'q0 (Start)';
+            document.getElementById('stackSize').textContent = '1 item';
+            
+            // Reset history
+            currentHistory = [];
+            currentStep = 0;
+            
+            // Hentikan interval jika ada
+            if (stepInterval) {
+                clearInterval(stepInterval);
+                stepInterval = null;
+            }
+        }
+        
+        // Tampilkan notifikasi (tetap sama)
+        function showNotification(message, type) {
+            // Buat elemen notifikasi
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 p-4 rounded-xl shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+            
+            // Pisahkan class yang memiliki spasi
+            const colorClasses = {
+                'success': ['bg-gradient-to-r', 'from-green-500', 'to-emerald-600'],
+                'error': ['bg-gradient-to-r', 'from-rose-500', 'to-red-600'],
+                'warning': ['bg-gradient-to-r', 'from-amber-500', 'to-orange-600'],
+                'info': ['bg-gradient-to-r', 'from-blue-500', 'to-indigo-600']
+            };
+            
+            // Tambahkan class warna satu per satu
+            const classes = colorClasses[type] || colorClasses.info;
+            classes.forEach(className => {
+                notification.classList.add(className);
+            });
+            
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <div class="mr-3">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'info-circle'} text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-white font-bold">${message}</p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Tambahkan ke body
+            document.body.appendChild(notification);
+            
+            // Animasi masuk
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 10);
+            
+            // Hapus otomatis setelah 3 detik
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        if (notification.parentElement) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
